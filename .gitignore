@@ -1,0 +1,5 @@
+# Exclude terraform state files
+
+*.terraform*
+*.tfstate*
+*.DS_Store*
