@@ -3,3 +3,10 @@
 *.terraform*
 *.tfstate*
 *.DS_Store*
+
+# Exclude ansible inventory files
+
+*.ini*
+ansible/project/
+ansible/inventory.ini/
+ansible/tmp/

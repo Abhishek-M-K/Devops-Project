@@ -12,7 +12,3 @@ resource "local_file" "ansible_inventory" {
       join("\n", [for ip in aws_instance.kube-nodes[*].public_ip : "ubuntu@${ip}"])
   ])
 }
-
-#   content = join("\n",[
-#     for ip in aws_instance.kube-nodes[*].public_ip : "ubuntu@${ip}"
-#   ])

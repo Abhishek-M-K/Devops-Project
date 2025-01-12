@@ -14,8 +14,8 @@ data "aws_security_group" "application_group" {
   name = "application_group"
 }
 
-data "aws_security_group" "lb_group" {
-  name = "launch-wizard-1"
+resource "aws_security_group" "lb_group" {
+  name = "lb_group"
 }
 
 # Ingress rule for the security group -> allow incoming traffic on port 8080
@@ -33,7 +33,7 @@ resource "aws_lb" "load_balancer" {
   name = "project-lb"
   load_balancer_type = "application"
   subnets = data.aws_subnets.default_subnet.ids
-  security_groups = [data.aws_security_group.lb_group.id]
+  security_groups = [aws_security_group.lb_group.id]
 }
 
 # Listener
@@ -83,13 +83,6 @@ resource "aws_lb_target_group_attachment" "kube_nodes_attachment" {
   port = var.port
 }
 
-# Load Balancer attachment Instance 2
-# resource "aws_lb_target_group_attachment" "app_instance_2" {
-#   target_group_arn = aws_lb_target_group.app_target_group.arn
-#   target_id = aws_instance.app2.id
-#   port = var.port
-# }
-
 # Listener Rule
 resource "aws_lb_listener_rule" "app_instances" {
   listener_arn = aws_lb_listener.http_listener.arn
@@ -108,7 +101,7 @@ resource "aws_lb_listener_rule" "app_instances" {
 # Ingress rule for load balancer -> allow incoming traffic on port 80
 resource "aws_security_group_rule" "lb_incoming_req" {
   type = "ingress"
-  security_group_id = data.aws_security_group.lb_group.id
+  security_group_id = aws_security_group.lb_group.id
   from_port = var.lb_port
   to_port = var.lb_port
   protocol = "tcp"
@@ -118,7 +111,7 @@ resource "aws_security_group_rule" "lb_incoming_req" {
 # Egress rule for load balancer -> allow outgoing traffic on all ports
 resource "aws_security_group_rule" "lb_outgoing_req" {
   type = "egress"
-  security_group_id = data.aws_security_group.lb_group.id
+  security_group_id = aws_security_group.lb_group.id
   from_port = 0
   to_port = 0
   protocol = "-1"
