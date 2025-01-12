@@ -1,0 +1,30 @@
+---
+- name: Get Ubuntu EC2 instances publice IPs from AWS S3
+  hosts: localhost
+  tasks:
+    - name: Fetch inventory.ini from S3 Bucket
+      amazon.aws.s3:
+        bucket: "ansible-policy" # S3 Bucket Name
+        object: "inventory.ini" # S3 Object Name
+        mode: get # Get the object
+        dest: "/tmp/inventory.ini" # Destination path to save the object
+
+    - name: Check if inventory.ini exists
+      ansible.builtin.stat:
+        path: "/tmp/inventory.ini" # Path to inventory.ini
+      register: inventory_file # Register the result
+
+    - name: Abort if inventory.ini is not found
+      fail:   
+        msg: "inventory.ini not found in S3 Bucket" # Error message
+      when: not inventory_file.stat.exists # Condition
+    
+    - name: Display the content of inventory.ini
+      debug: 
+        msg: "{{ lookup('file', '/tmp/inventory.ini') }}"  # Display the content of inventory.ini
+
+- name: Run other tasks on kube-nodes
+  hosts: kube-nodes
+  roles:
+    - elysiajs-app
+    - docker

@@ -1,0 +1,32 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for docker
+- name: Install Docker
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+    update_cache: yes
+
+- name: Verify Docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_version
+
+- name: Display Docker version
+  debug:
+    var: docker_version.stdout
+
+- name: Run Docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: yes
+    state: started
+
+- name: Install Redis Image
+  ansible.builtin.command: docker pull redis
+
+- name: Spin up Redis Container
+  ansible.builtin.command: docker run -d --name redis-server redis -p 6379:6379
+  debug:
+    msg: "Redis Container is up and running"
+
+
