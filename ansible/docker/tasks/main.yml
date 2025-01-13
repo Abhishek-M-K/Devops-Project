@@ -22,11 +22,29 @@
     state: started
 
 - name: Install Redis Image
-  ansible.builtin.command: docker pull redis
+  # Update from command to community.docker collection
+  # ansible.builtin.command: docker pull redis
+  community.docker.docker_image:
+    name: redis
+    state: present
+    source: pull
 
 - name: Spin up Redis Container
-  ansible.builtin.command: docker run -d --name redis-server redis -p 6379:6379
+  # Update from command to community.docker collection
+  # ansible.builtin.command: docker run -d --name redis-server redis -p 6379:6379
+  # debug:
+  #   msg: "Redis Container is up and running"
+  community.docker.docker_container:
+    name: redis-server
+    image: redis
+    state: started
+    ports:
+      - "6379:6379"
+
+- name: Verify containers running"
+  ansible.builtin.command: docker ps --filter "name=redis-server" --format "{{.Names}}"
+  register: containers
+
+- name: Display running containers
   debug:
-    msg: "Redis Container is up and running"
-
-
+    msg: "Redis running containers: {{ containers.stdout }}" 
