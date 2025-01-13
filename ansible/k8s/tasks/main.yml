@@ -1,0 +1,121 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for k8s
+
+# Tasks for setting up Master Node
+- name: Install required packages from Master Node (kube-nodes[0])
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Add Kubernetes GPG key
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Add Kubernetes repository
+  ansible.builtin.apt_repository:
+    repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+    state: present
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Install Kubernetes components
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - kubeadm # Bootstrapping a best-practice Kubernetes cluster
+    - kubelet # Primary node agent that runs on each node
+    - kubectl # CLI for running commands against Kubernetes clusters
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Initialize the Kubernetes Master Node
+  ansible.builtin.command: kubeadm init --pod-network-cidr=10.244.0.0/16
+  when: inventory_hostname == groups['kube-nodes'][0]
+  register: kubeadm_init_master
+
+- name: Copy the Kubernetes configuration file to the user's home directory
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: ~/.kube/config
+    remote_src: yes
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Install Flannel network plugin # Flannel is a simple and easy way to configure a layer 3 network fabric designed for Kubernetes
+  ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+# Tasks for setting up Worker Node
+- name: Install required packages from Worker Node (kube-nodes[1])
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+  when: inventory_hostname == groups['kube-nodes'][1]
+
+- name: Add Kubernetes GPG key
+  ansible.builtin.apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+  when: inventory_hostname == groups['kube-nodes'][1]
+
+- name: Add Kubernetes repository
+  ansible.builtin.apt_repository:
+    repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+    state: present
+  when: inventory_hostname == groups['kube-nodes'][1]
+
+- name: Install Kubernetes components
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - kubeadm # Bootstrapping a best-practice Kubernetes cluster
+    - kubelet # Primary node agent that runs on each node
+  when: inventory_hostname == groups['kube-nodes'][1]
+
+- name: Fetch join command from Master Node
+  ansible.builtin.command: kubeadm token create --print-join-command
+  when: inventory_hostname == groups['kube-nodes'][0]
+  register: kubeadm_join_command
+
+- name: Join the Worker Node to the Kubernetes Cluster
+  ansible.builtin.command: "{{ hostvars[groups['kube-nodes'][0]].['kubeadm_join_command'].stdout }}"
+  when: inventory_hostname == groups['kube-nodes'][1]
+
+- name: Verify the Worker Node is added to the Kubernetes Cluster
+  ansible.builtin.command: kubectl get nodes
+  when: inventory_hostname == groups['kube-nodes'][0]
+  
+- name: Copy Redis Deployment and Service YAML files to Master Node
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: /home/ubuntu/k8s/redisdemo/
+  with_fileglob: # with_fileglob is a loop that iterates over files that match a glob pattern in a directory
+    - k8s/redis/deployment.yaml
+    - k8s/redis/service.yaml
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Apply Redis Deployment and Service YAML files
+  ansible.builtin.command: kubectl apply -f /home/ubuntu/k8s/redisdemo/
+  when: inventory_hostname == groups['kube-nodes'][0]
+
+- name: Start Redis Pods Ready
+  ansible.builtin.command: kubectl wait --for=condition=Ready pod -l app=redis --timeout=60s
+  when: inventory_hostname == groups['kube-nodes'][0]
+
