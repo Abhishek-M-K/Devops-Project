@@ -21,6 +21,13 @@ variable "instance_type" {
   default     = "t2.micro"
 }
 
+# AWS Key Pair
+variable "key_pair" {
+  description = "The key pair to use for the EC2 instance"
+  type        = string
+  default     = "ansible-kp"
+}
+
 # AWS Route53 domain
 variable "domain" {
   description = "The domain to use for the Route53 hosted zone"

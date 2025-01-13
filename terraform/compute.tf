@@ -5,6 +5,7 @@ resource "aws_instance" "kube-nodes" {
   count = 2
   instance_type = var.instance_type
   security_groups = [data.aws_security_group.application_group.name]
+  key_name = var.key_pair 
   user_data = <<-EOF
                 #!/bin/bash
                 echo "Hello All, Abhishek here! Devops is fun !!!" > /var/www/html/index.html
