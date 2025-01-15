@@ -32,7 +32,7 @@ variable "key_pair" {
 variable "domain" {
   description = "The domain to use for the Route53 hosted zone"
   type        = string
-  default     = "abhishektriesdevops.com"
+  default     = "abhishektriesdevops.dev"
 }
 
 # Application Port 

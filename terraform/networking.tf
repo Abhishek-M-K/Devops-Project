@@ -28,6 +28,15 @@ resource "aws_security_group_rule" "allow_http_reqs" {
   cidr_blocks = ["0.0.0.0/0"]
 }
 
+resource "aws_security_group_rule" "allow-outbound-git-req" {
+  type = "egress"
+  security_group_id = data.aws_security_group.application_group.id
+  from_port = 443
+  to_port = 443
+  protocol = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
+}
+
 # Load Balancer
 resource "aws_lb" "load_balancer" {
   name = "project-lb"
