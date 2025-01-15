@@ -1,12 +1,31 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for docker
+# - name: Install Docker
+#   become: true
+#   ansible.builtin.apt:
+#     name: docker.io
+#     state: present
+#     update_cache: yes
+
 - name: Install Docker
   become: true
-  ansible.builtin.apt:
-    name: docker.io
+  ansible.builtin.package:
+    name: docker
     state: present
-    update_cache: yes
+
+- name: Start and enable Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+# - name: Run Docker
+#   become: true
+#   ansible.builtin.systemd:
+#     name: docker
+#     enabled: yes
+#     state: started
 
 - name: Verify Docker is installed
   ansible.builtin.command: docker --version
@@ -16,26 +35,29 @@
   debug:
     var: docker_version.stdout
 
-- name: Run Docker
-  ansible.builtin.systemd:
-    name: docker
-    enabled: yes
-    state: started
 
 - name: Install Redis Image
   # Update from command to community.docker collection
   # ansible.builtin.command: docker pull redis
-  community.docker.docker_image:
-    name: redis
+  become: true
+  docker_image:
+    name: redis:latest
     state: present
     source: pull
+
+- name: Remove the existing container if it exists
+  ignore_errors: true
+  docker_container:
+    name: redis-server
+    state: absent
 
 - name: Spin up Redis Container
   # Update from command to community.docker collection
   # ansible.builtin.command: docker run -d --name redis-server redis -p 6379:6379
   # debug:
   #   msg: "Redis Container is up and running"
-  community.docker.docker_container:
+  become: true
+  docker_container:
     name: redis-server
     image: redis
     state: started
@@ -43,9 +65,11 @@
       - "6379:6379"
 
 - name: Verify containers running"
-  ansible.builtin.command: docker ps --filter "name=redis-server" --format "{{.Names}}"
+  become: true
+  ansible.builtin.command: docker ps --filter "name=redis-server" --format "{{'{{.Names}}'}}"
   register: containers
 
 - name: Display running containers
+  become: true
   debug:
-    msg: "Redis running containers: {{ containers.stdout }}" 
+    msg: "Redis running containers: {{ containers.stdout }}"
