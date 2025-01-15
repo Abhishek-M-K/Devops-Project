@@ -3,7 +3,7 @@
   hosts: localhost
   tasks:
     - name: Fetch inventory.ini from S3 Bucket
-      amazon.aws.s3:
+      amazon.aws.s3_object:
         bucket: "ansible-policy" # S3 Bucket Name
         object: "inventory.ini" # S3 Object Name
         mode: get # Get the object

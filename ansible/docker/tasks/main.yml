@@ -2,6 +2,7 @@
 ---
 # tasks file for docker
 - name: Install Docker
+  become: true
   ansible.builtin.apt:
     name: docker.io
     state: present
