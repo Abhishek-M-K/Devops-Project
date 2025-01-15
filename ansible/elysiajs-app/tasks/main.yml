@@ -7,10 +7,11 @@
     name: unzip
     state: present
     update_cache: yes
+  # ignore_errors: true
 
 - name: Install Bun via curl
   ansible.builtin.shell: |
-    curl https://bun.sh/install | bash
+    curl -fsSL https://bun.sh/install | bash
 
 - name: Add Bun Envs to ~/.bashrc
   ansible.builtin.lineinfile:
@@ -37,17 +38,11 @@
     repo: "https://github.com/Abhishek-M-K/ElysiaJs-Redis.git"
     dest: "/home/ubuntu/ElysiaJs-Redis"
     clone: yes
-    update: no
+    update: yes
   when: bun_binary.stat.exists
 
 - name: Install application dependencies
   become: true
-  # environment:
-  #   PATH: "/root/.bun/bin:{{ ansible_env.PATH }}"
-  # ansible.builtin.shell: |
-  #   cd /home/ubuntu/ElysiaJs-Redis && bun install
-  # args:
-  #   executable: /bin/bash
   ansible.builtin.shell: |
     /home/ubuntu/.bun/bin/bun install
   args:
@@ -58,18 +53,12 @@
   become: true
   async: 60 # Run the command in the background
   poll: 0 # Do not wait for the command to finish
-  # environment:
-  #   PATH: "/root/.bun/bin:{{ ansible_env.PATH }}"
-  # ansible.builtin.shell: |
-  #   cd /home/ubuntu/ElysiaJs-Redis && bun dev
-  # args:
-  #   executable: /bin/bash
   ansible.builtin.shell: |
     /home/ubuntu/.bun/bin/bun dev
   args:
     chdir: "/home/ubuntu/ElysiaJs-Redis"
   when: bun_binary.stat.exists
-
+  
 # - name: Install Bun
 #   become: true
 #   ansible.builtin.shell: |
