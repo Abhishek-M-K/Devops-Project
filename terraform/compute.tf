@@ -9,7 +9,13 @@ resource "aws_instance" "kube-nodes" {
   user_data = <<-EOF
                 #!/bin/bash
                 apt-get update -y
-                apt-get install -y python3 nginx
+                apt-get install -y python3 nginx curl git 
+
+                # Install Node
+                curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.34.0/install.sh | bash
+                export NVM_DIR="$HOME/.nvm"
+                [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+                nvm install node
 
                 # Create a simple HTML file
                 mkdir -p /var/www/html
@@ -28,12 +34,22 @@ resource "aws_instance" "kube-nodes" {
 
                   # Tunnel proxy reqs to ElysiaJs App
                   location /api {
-                    proxy_pass http://127.0.0.1:8888; 
+                    proxy_pass http://127.0.0.1:8888/api; 
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade $http_upgrade;
                     proxy_set_header Connection 'upgrade';
                     proxy_set_header Host $host;
                     proxy_cache_bypass $http_upgrade;
+                  }
+
+                  # Proxy to Redis Routes
+                  location /redis {
+                      proxy_pass http://127.0.0.1:8888/redis;
+                      proxy_http_version 1.1;
+                      proxy_set_header Upgrade $http_upgrade;
+                      proxy_set_header Connection 'upgrade';
+                      proxy_set_header Host $host;
+                      proxy_cache_bypass $http_upgrade;
                   }
                 }
                 NGINXCONF # End of config

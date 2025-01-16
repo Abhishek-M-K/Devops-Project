@@ -1,0 +1,29 @@
+server {
+    listen 80;
+
+    # Serve static files
+    location / {
+        root /var/www/html;
+        index index.html;
+    }
+
+    # Proxy to Elysia.js App
+    location /api {
+        proxy_pass http://127.0.0.1:8888/api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Proxy to Redis Routes
+    location /redis {
+        proxy_pass http://127.0.0.1:8888/redis;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
