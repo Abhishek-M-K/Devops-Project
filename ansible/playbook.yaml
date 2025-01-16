@@ -25,7 +25,7 @@
 
 - name: Run other tasks on kube-nodes
   hosts: kube-nodes
-  become: true
+  # become: true
   roles:
-    - docker
     - elysiajs-app
+    - docker

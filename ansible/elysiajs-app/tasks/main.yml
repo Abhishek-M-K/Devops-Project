@@ -33,7 +33,20 @@
     path: "{{ ansible_env.HOME }}/.bun/bin/bun"
   register: bun_binary
 
+# Debug PATH and check Bun
+# - name: Debug PATH and Bun binary
+#   ansible.builtin.shell: |
+#     echo $PATH
+#     ls -l {{ ansible_env.HOME }}/.bun/bin/bun
+#   register: debug_output
+#   ignore_errors: true
+
+# - name: Output Debug Information
+#   ansible.builtin.debug:
+#     msg: "{{ debug_output.stdout_lines }}"
+
 - name: Clone ElysiaJs Snippet from Abhishek-M-K
+  become: true
   ansible.builtin.git:
     repo: "https://github.com/Abhishek-M-K/ElysiaJs-Redis.git"
     dest: "/home/ubuntu/ElysiaJs-Redis"
@@ -49,15 +62,26 @@
     chdir: "/home/ubuntu/ElysiaJs-Redis"
   when: bun_binary.stat.exists
 
+# Application is not running 😞
 - name: Run the application
   become: true
-  async: 60 # Run the command in the background
-  poll: 0 # Do not wait for the command to finish
+  become_user: ubuntu # Run the command as ubuntu user (Tested via EC2 connect)
+  # async: 60 # Run the command in the background
+  # poll: 0 # Do not wait for the command to finish
   ansible.builtin.shell: |
-    /home/ubuntu/.bun/bin/bun dev
+    /home/ubuntu/.bun/bin/bun dev --port 8888
   args:
     chdir: "/home/ubuntu/ElysiaJs-Redis"
+  register: app_run
   when: bun_binary.stat.exists
+  ignore_errors: true
+  environment:
+    BUN_INSTALL: "{{ ansible_env.HOME }}/.bun"
+    PATH: "{{ ansible_env.HOME }}/.bun/bin:{{ ansible_env.PATH }}"
+
+- name: Display the output of the application
+  ansible.builtin.debug:
+    var: app_run
   
 # - name: Install Bun
 #   become: true
