@@ -1,13 +1,33 @@
 #SPDX-License-Identifier: MIT-0
 ---
 # tasks file for elysiajs-app
+- name: Update system packages
+  become: true
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install required dependencies
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+      - nginx
+      - net-tools
+    state: present
+
+- name: Install Node.js
+  become: true
+  ansible.builtin.shell: |
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt install -y nodejs
+
 - name: Install unzip
   become: true
   ansible.builtin.apt:
     name: unzip
     state: present
     update_cache: yes
-  # ignore_errors: true
 
 - name: Install Bun via curl
   ansible.builtin.shell: |
@@ -33,18 +53,6 @@
     path: "{{ ansible_env.HOME }}/.bun/bin/bun"
   register: bun_binary
 
-# Debug PATH and check Bun
-# - name: Debug PATH and Bun binary
-#   ansible.builtin.shell: |
-#     echo $PATH
-#     ls -l {{ ansible_env.HOME }}/.bun/bin/bun
-#   register: debug_output
-#   ignore_errors: true
-
-# - name: Output Debug Information
-#   ansible.builtin.debug:
-#     msg: "{{ debug_output.stdout_lines }}"
-
 - name: Clone ElysiaJs Snippet from Abhishek-M-K
   become: true
   ansible.builtin.git:
@@ -62,40 +70,116 @@
     chdir: "/home/ubuntu/ElysiaJs-Redis"
   when: bun_binary.stat.exists
 
-# Application is not running 😞
-- name: Run the application
+- name: Install PM2 globally using Bun
   become: true
-  become_user: ubuntu # Run the command as ubuntu user (Tested via EC2 connect)
-  # async: 60 # Run the command in the background
-  # poll: 0 # Do not wait for the command to finish
   ansible.builtin.shell: |
-    /home/ubuntu/.bun/bin/bun dev --port 8888
-  args:
-    chdir: "/home/ubuntu/ElysiaJs-Redis"
-  register: app_run
-  when: bun_binary.stat.exists
-  ignore_errors: true
-  environment:
-    BUN_INSTALL: "{{ ansible_env.HOME }}/.bun"
-    PATH: "{{ ansible_env.HOME }}/.bun/bin:{{ ansible_env.PATH }}"
+    {{ ansible_env.HOME }}/.bun/bin/bun add -g pm2
 
-- name: Display the output of the application
+- name: Display Home Directory
   ansible.builtin.debug:
-    var: app_run
-  
-# - name: Install Bun
+    var: ansible_env.HOME
+
+- name: Stop existing PM2 process if running
+  become: true
+  ansible.builtin.shell: |
+    {{ ansible_env.HOME }}/.bun/bin/pm2 delete elysia-dev || true
+  ignore_errors: true
+
+- name: Start the Elysia.js application with PM2
+  become: true
+  ansible.builtin.shell: |
+    {{ ansible_env.HOME }}/.bun/bin/pm2 start {{ ansible_env.HOME }}/.bun/bin/bun \
+    --name elysia-dev \
+    --cwd {{ ansible_env.HOME }}/ElysiaJs-Redis \
+    --env PORT=8888 \
+    -- run dev
+  args:
+    chdir: "{{ ansible_env.HOME }}/ElysiaJs-Redis"
+  environment:
+    PORT: "8888"
+    NODE_ENV: "production"
+
+- name: Wait for application to start
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: Check PM2 process status
+  become: true
+  ansible.builtin.shell: |
+    {{ ansible_env.HOME }}/.bun/bin/pm2 show elysia-dev
+  register: pm2_status
+  ignore_errors: true
+
+- name: Display PM2 status
+  ansible.builtin.debug:
+    var: pm2_status.stdout_lines
+
+- name: Check if port 8888 is listening
+  become: true
+  ansible.builtin.shell: |
+    netstat -tulpn | grep :8888
+  register: port_check
+  ignore_errors: true
+
+- name: Display port status
+  ansible.builtin.debug:
+    var: port_check.stdout_lines
+
+- name: Configure Nginx
+  become: true
+  ansible.builtin.template:
+    src: "nginx.j2"
+    dest: "/etc/nginx/sites-available/default"
+  notify: Reload Nginx
+
+- name: Restart nginx
+  become: true
+  ansible.builtin.systemd:
+    name: nginx
+    state: restarted
+    enabled: yes
+
+#   DEBUGGING TASKS:
+# - name: Check nginx error logs
 #   become: true
 #   ansible.builtin.shell: |
-#     curl -fsSL https://bun.sh/install | bash
-#     echo "export BUN_INSTALL=\"/root/.bun\"" >> /root/.bashrc
-#     echo "export PATH=\"/root/.bun/bin:\$PATH\"" >> /root/.bashrc
-#     source /root/.bashrc
-#   args:
-#     executable: /bin/bash
-#     creates: "/root/.bun/bin/bun"
+#     tail -n 50 /var/log/nginx/error.log
+#   register: nginx_errors
 #   ignore_errors: true
-# ansible.builtin.shell: |
-#   curl -fsSL https://bun.sh/install | bash
-# args:
-#   executable: /bin/bash
-#   creates: "/root/.bun/bin/bun"
+
+# - name: Display nginx errors
+#   ansible.builtin.debug:
+#     var: nginx_errors.stdout_lines
+
+# - name: Check application stdout logs
+#   become: true
+#   ansible.builtin.shell: |
+#     tail -n 50 {{ ansible_env.HOME }}/.pm2/logs/elysia-dev-out.log
+#   register: app_stdout
+#   ignore_errors: true
+
+# - name: Display application stdout
+#   ansible.builtin.debug:
+#     var: app_stdout.stdout_lines
+
+# - name: Check application error logs
+#   become: true
+#   ansible.builtin.shell: |
+#     tail -n 50 {{ ansible_env.HOME }}/.pm2/logs/elysia-dev-error.log
+#   register: app_stderr
+#   ignore_errors: true
+
+# - name: Display application stderr
+#   ansible.builtin.debug:
+#     var: app_stderr.stdout_lines
+
+- name: Test API endpoint
+  ansible.builtin.uri:
+    url: http://localhost:8888/api
+    return_content: yes
+  register: api_test
+  ignore_errors: true
+
+- name: Display API test results
+  ansible.builtin.debug:
+    var: api_test
