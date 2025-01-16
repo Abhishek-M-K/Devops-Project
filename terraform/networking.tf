@@ -19,14 +19,14 @@ resource "aws_security_group" "lb_group" {
 }
 
 # Ingress rule for the security group -> allow incoming traffic on port 8080
-resource "aws_security_group_rule" "allow_http_reqs" {
-  type = "ingress"
-  security_group_id = data.aws_security_group.application_group.id
-  from_port = var.port
-  to_port = var.port
-  protocol = "tcp"
-  cidr_blocks = ["0.0.0.0/0"]
-}
+# resource "aws_security_group_rule" "allow_http_reqs" {
+#   type = "ingress"
+#   security_group_id = data.aws_security_group.application_group.id
+#   from_port = var.port
+#   to_port = var.port
+#   protocol = "tcp"
+#   cidr_blocks = ["0.0.0.0/0"]
+# }
 
 # default added 
 # resource "aws_security_group_rule" "allow-outbound-git-req" {

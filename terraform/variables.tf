@@ -39,7 +39,7 @@ variable "domain" {
 variable "port" {
   description = "The port to use for the EC2 instance"
   type        = number
-  default     = 8080
+  default     = 80
 }
 
 # LB Port

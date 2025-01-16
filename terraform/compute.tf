@@ -8,7 +8,7 @@ resource "aws_instance" "kube-nodes" {
   key_name = var.key_pair 
   user_data = <<-EOF
                 #!/bin/bash
-                apt-get update
+                apt-get update -y
                 apt-get install -y python3 nginx
 
                 # Create a simple HTML file
