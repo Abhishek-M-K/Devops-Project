@@ -8,13 +8,35 @@
 #     state: present
 #     update_cache: yes
 
+# - name: Install Docker
+#   become: true
+#   ansible.builtin.package:
+#     name: docker
+#     state: present
+
+# Install Docker
 - name: Install Docker
   become: true
   ansible.builtin.package:
-    name: docker
+    name: 
+      - docker.io  # Common for Ubuntu
+      - containerd  # Fallback if needed
     state: present
 
+# Verify Docker service name
+- name: Check Docker service name
+  become: true
+  ansible.builtin.command: systemctl list-units --type=service | grep docker
+  register: docker_service_check
+  ignore_errors: true
+
+- name: Determine Docker service name
+  set_fact:
+    docker_service: "{{ 'docker' if 'docker.service' in docker_service_check.stdout else 'docker.io' }}"
+
+
 - name: Start and enable Docker service
+  become: true
   ansible.builtin.service:
     name: docker
     state: started
@@ -28,10 +50,12 @@
 #     state: started
 
 - name: Verify Docker is installed
+  become: true
   ansible.builtin.command: docker --version
   register: docker_version
 
 - name: Display Docker version
+  become: true
   debug:
     var: docker_version.stdout
 
@@ -46,6 +70,7 @@
     source: pull
 
 - name: Remove the existing container if it exists
+  become: true
   ignore_errors: true
   docker_container:
     name: redis-server
