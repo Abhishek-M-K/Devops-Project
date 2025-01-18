@@ -1,3 +1,5 @@
+**PS** : Ignore k8s/redis dir, have some plans with it for the future 👀
+
 ### Terminologies :
 -  ⁠Master node: Central server in a distributed system responsible for managing and coordinating resources, tasks, etc across worker nodes 👤.
 - ⁠ ⁠Worker/ Managed node: A machine/ node in a distributed system that performs assigned tasks, workloads, and reports results, while being managed by a master node 👥.
