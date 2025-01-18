@@ -34,7 +34,7 @@ resource "aws_instance" "kube-nodes" {
 
                   # Tunnel proxy reqs to ElysiaJs App
                   location /api {
-                    proxy_pass http://127.0.0.1:8888/api; 
+                    proxy_pass http://127.0.0.1:8888/api/; 
                     proxy_http_version 1.1;
                     proxy_set_header Upgrade $http_upgrade;
                     proxy_set_header Connection 'upgrade';
@@ -44,7 +44,7 @@ resource "aws_instance" "kube-nodes" {
 
                   # Proxy to Redis Routes
                   location /redis {
-                      proxy_pass http://127.0.0.1:8888/redis;
+                      proxy_pass http://127.0.0.1:8888/redis/;
                       proxy_http_version 1.1;
                       proxy_set_header Upgrade $http_upgrade;
                       proxy_set_header Connection 'upgrade';
